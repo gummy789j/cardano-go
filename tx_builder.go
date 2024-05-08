@@ -196,15 +196,32 @@ func (tb *TxBuilder) Build() (*Tx, error) {
 
 func (tb *TxBuilder) addChangeIfNeeded(inputAmount, outputAmount *Value) error {
 	// Temporary fee to serialize a valid transaction
-	tb.tx.Body.Fee = 2e5
+	var expectedFee Coin
+	if tb.tx.Body.Fee == 0 {
+		tb.tx.Body.Fee = 2e5
 
-	// TODO: We should build a fake tx with hardcoded data like signatures, hashes, etc
-	if err := tb.build(); err != nil {
-		return err
+		// TODO: We should build a fake tx with hardcoded data like signatures, hashes, etc
+		if err := tb.build(); err != nil {
+			return err
+		}
+
+		expectedFee = tb.calculateMinFee()
+	} else {
+		// TODO: We should build a fake tx with hardcoded data like signatures, hashes, etc
+		if err := tb.build(); err != nil {
+			return err
+		}
+
+		minFee := tb.calculateMinFee()
+
+		if minFee > expectedFee {
+			expectedFee = minFee
+		} else {
+			expectedFee = tb.tx.Body.Fee
+		}
 	}
 
-	minFee := tb.calculateMinFee()
-	outputAmount = outputAmount.Add(NewValue(minFee))
+	outputAmount = outputAmount.Add(NewValue(expectedFee))
 
 	if inputOutputCmp := inputAmount.Cmp(outputAmount); inputOutputCmp == -1 || inputOutputCmp == 2 {
 		return fmt.Errorf(
@@ -213,7 +230,7 @@ func (tb *TxBuilder) addChangeIfNeeded(inputAmount, outputAmount *Value) error {
 			outputAmount,
 		)
 	} else if inputOutputCmp == 0 {
-		tb.tx.Body.Fee = minFee
+		tb.tx.Body.Fee = expectedFee
 		return nil
 	}
 
@@ -224,7 +241,7 @@ func (tb *TxBuilder) addChangeIfNeeded(inputAmount, outputAmount *Value) error {
 	changeMinCoins := tb.MinCoinsForTxOut(changeOutput)
 	if changeAmount.Coin < changeMinCoins {
 		if changeAmount.OnlyCoin() {
-			tb.tx.Body.Fee = minFee + changeAmount.Coin // burn change
+			tb.tx.Body.Fee = expectedFee + changeAmount.Coin // burn change
 			return nil
 		}
 		return fmt.Errorf(
@@ -237,21 +254,24 @@ func (tb *TxBuilder) addChangeIfNeeded(inputAmount, outputAmount *Value) error {
 	tb.tx.Body.Outputs = append([]*TxOutput{changeOutput}, tb.tx.Body.Outputs...)
 
 	newMinFee := tb.calculateMinFee()
-	changeAmount.Coin = changeAmount.Coin + minFee - newMinFee
-	if changeAmount.Coin < changeMinCoins {
-		if changeAmount.OnlyCoin() {
-			tb.tx.Body.Fee = newMinFee + changeAmount.Coin // burn change
-			tb.tx.Body.Outputs = tb.tx.Body.Outputs[1:]    // remove change output
-			return nil
+	if newMinFee > expectedFee {
+		changeAmount.Coin = changeAmount.Coin + expectedFee - newMinFee
+		if changeAmount.Coin < changeMinCoins {
+			if changeAmount.OnlyCoin() {
+				tb.tx.Body.Fee = newMinFee + changeAmount.Coin // burn change
+				tb.tx.Body.Outputs = tb.tx.Body.Outputs[1:]    // remove change output
+				return nil
+			}
+			return fmt.Errorf(
+				"insuficient input for change output with multiassets, got %v want %v",
+				inputAmount.Coin,
+				changeMinCoins,
+			)
 		}
-		return fmt.Errorf(
-			"insuficient input for change output with multiassets, got %v want %v",
-			inputAmount.Coin,
-			changeMinCoins,
-		)
+		tb.tx.Body.Fee = newMinFee
 	}
 
-	tb.tx.Body.Fee = newMinFee
+	tb.tx.Body.Fee = expectedFee
 
 	return nil
 }
