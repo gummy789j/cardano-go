@@ -18,7 +18,7 @@ const (
 )
 
 // Address represents a Cardano address.
-type Address struct {
+type ShelleyAddress struct {
 	Network Network
 	Type    AddressType
 	Pointer Pointer
@@ -27,18 +27,25 @@ type Address struct {
 	Stake   StakeCredential
 }
 
+type Address interface {
+	Bytes() []byte
+	MarshalCBOR() ([]byte, error)
+	String() string
+	UnmarshalCBOR(data []byte) error
+}
+
 // NewAddress creates an Address from a bech32 encoded string.
 func NewAddress(bech string) (Address, error) {
 	_, bytes, err := bech32.DecodeToBase256(bech)
 	if err != nil {
-		return Address{}, err
+		return nil, err
 	}
 	return NewAddressFromBytes(bytes)
 }
 
 // NewAddressFromBytes creates an Address from bytes.
 func NewAddressFromBytes(bytes []byte) (Address, error) {
-	addr := Address{
+	addr := ShelleyAddress{
 		Type:    AddressType(bytes[0] >> 4),
 		Network: Network(bytes[0] & 0x01),
 	}
@@ -46,7 +53,7 @@ func NewAddressFromBytes(bytes []byte) (Address, error) {
 	switch addr.Type {
 	case Base:
 		if len(bytes) != 57 {
-			return addr, errors.New("base address length should be 29")
+			return nil, errors.New("base address length should be 29")
 		}
 		addr.Payment = StakeCredential{
 			Type:    KeyCredential,
@@ -58,7 +65,7 @@ func NewAddressFromBytes(bytes []byte) (Address, error) {
 		}
 	case Base + 1:
 		if len(bytes) != 57 {
-			return addr, errors.New("base address length should be 29")
+			return nil, errors.New("base address length should be 29")
 		}
 		addr.Payment = StakeCredential{
 			Type:       ScriptCredential,
@@ -70,7 +77,7 @@ func NewAddressFromBytes(bytes []byte) (Address, error) {
 		}
 	case Base + 2:
 		if len(bytes) != 57 {
-			return addr, errors.New("base address length should be 29")
+			return nil, errors.New("base address length should be 29")
 		}
 		addr.Payment = StakeCredential{
 			Type:    KeyCredential,
@@ -82,7 +89,7 @@ func NewAddressFromBytes(bytes []byte) (Address, error) {
 		}
 	case Base + 3:
 		if len(bytes) != 57 {
-			return addr, errors.New("base address length should be 29")
+			return nil, errors.New("base address length should be 29")
 		}
 		addr.Payment = StakeCredential{
 			Type:       ScriptCredential,
@@ -94,23 +101,23 @@ func NewAddressFromBytes(bytes []byte) (Address, error) {
 		}
 	case Ptr:
 		if len(bytes) <= 29 {
-			return addr, errors.New("enterprise address length should be greater than 29")
+			return nil, errors.New("enterprise address length should be greater than 29")
 		}
 
 		index := uint(29)
 		slot, sn, err := decodeFromNat(bytes[29:])
 		if err != nil {
-			return addr, err
+			return nil, err
 		}
 		index += sn
 		txIndex, tn, err := decodeFromNat(bytes[index:])
 		if err != nil {
-			return addr, err
+			return nil, err
 		}
 		index += tn
 		certIndex, _, err := decodeFromNat(bytes[index:])
 		if err != nil {
-			return addr, err
+			return nil, err
 		}
 
 		addr.Payment = StakeCredential{
@@ -120,23 +127,23 @@ func NewAddressFromBytes(bytes []byte) (Address, error) {
 		addr.Pointer = Pointer{Slot: slot, TxIndex: txIndex, CertIndex: certIndex}
 	case Ptr + 1:
 		if len(bytes) <= 29 {
-			return addr, errors.New("enterprise address length should be greater than 29")
+			return nil, errors.New("enterprise address length should be greater than 29")
 		}
 
 		index := uint(29)
 		slot, sn, err := decodeFromNat(bytes[29:])
 		if err != nil {
-			return addr, err
+			return nil, err
 		}
 		index += sn
 		txIndex, tn, err := decodeFromNat(bytes[index:])
 		if err != nil {
-			return addr, err
+			return nil, err
 		}
 		index += tn
 		certIndex, _, err := decodeFromNat(bytes[index:])
 		if err != nil {
-			return addr, err
+			return nil, err
 		}
 
 		addr.Payment = StakeCredential{
@@ -146,7 +153,7 @@ func NewAddressFromBytes(bytes []byte) (Address, error) {
 		addr.Pointer = Pointer{Slot: slot, TxIndex: txIndex, CertIndex: certIndex}
 	case Enterprise:
 		if len(bytes) != 29 {
-			return addr, errors.New("enterprise address length should be 29")
+			return nil, errors.New("enterprise address length should be 29")
 		}
 		addr.Payment = StakeCredential{
 			Type:    KeyCredential,
@@ -154,7 +161,7 @@ func NewAddressFromBytes(bytes []byte) (Address, error) {
 		}
 	case Enterprise + 1:
 		if len(bytes) != 29 {
-			return addr, errors.New("enterprise address length should be 29")
+			return nil, errors.New("enterprise address length should be 29")
 		}
 		addr.Payment = StakeCredential{
 			Type:       ScriptCredential,
@@ -162,17 +169,17 @@ func NewAddressFromBytes(bytes []byte) (Address, error) {
 		}
 	}
 
-	return addr, nil
+	return &addr, nil
 }
 
 // MarshalCBOR implements cbor.Marshaler.
-func (addr *Address) MarshalCBOR() ([]byte, error) {
+func (addr *ShelleyAddress) MarshalCBOR() ([]byte, error) {
 	em, _ := cbor.CanonicalEncOptions().EncMode()
 	return em.Marshal(addr.Bytes())
 }
 
 // UnmarshalCBOR implements cbor.Unmarshaler.
-func (addr *Address) UnmarshalCBOR(data []byte) error {
+func (addr *ShelleyAddress) UnmarshalCBOR(data []byte) error {
 	bytes := []byte{}
 	if err := cborDec.Unmarshal(data, &bytes); err != nil {
 		return nil
@@ -182,17 +189,15 @@ func (addr *Address) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 
-	addr.Network = decoded.Network
-	addr.Type = decoded.Type
-	addr.Payment = decoded.Payment
-	addr.Stake = decoded.Stake
-	addr.Pointer = decoded.Pointer
+	addrDecoded := decoded.(*ShelleyAddress)
+
+	*addr = *addrDecoded
 
 	return nil
 }
 
 // Bytes returns the CBOR encoding of the Address as bytes.
-func (addr *Address) Bytes() []byte {
+func (addr *ShelleyAddress) Bytes() []byte {
 	var networkByte uint8
 	switch addr.Network {
 	case Testnet, Preprod:
@@ -219,17 +224,17 @@ func (addr *Address) Bytes() []byte {
 }
 
 // Bech32 returns the Address encoded as bech32.
-func (addr *Address) Bech32() string {
+// func (addr *ShelleyAddress) Bech32() string {
+
+// }
+
+// String returns the Address encoded as bech32.
+func (addr ShelleyAddress) String() string {
 	addrStr, err := bech32.EncodeFromBase256(getHrp(addr.Network), addr.Bytes())
 	if err != nil {
 		panic(err)
 	}
 	return addrStr
-}
-
-// String returns the Address encoded as bech32.
-func (addr Address) String() string {
-	return addr.Bech32()
 }
 
 // NewBaseAddress returns a new Base Address.
@@ -242,7 +247,7 @@ func NewBaseAddress(network Network, payment StakeCredential, stake StakeCredent
 	} else if payment.Type == ScriptCredential && stake.Type == ScriptCredential {
 		addrType = Base + 3
 	}
-	return Address{Type: addrType, Network: network, Payment: payment, Stake: stake}, nil
+	return &ShelleyAddress{Type: addrType, Network: network, Payment: payment, Stake: stake}, nil
 }
 
 // NewEnterpriseAddress returns a new Enterprise Address.
@@ -251,7 +256,7 @@ func NewEnterpriseAddress(network Network, payment StakeCredential) (Address, er
 	if payment.Type == ScriptCredential {
 		addrType = Enterprise + 1
 	}
-	return Address{Type: addrType, Network: network, Payment: payment}, nil
+	return &ShelleyAddress{Type: addrType, Network: network, Payment: payment}, nil
 }
 
 // Pointer is the location of the Stake Registration Certificate in the blockchain.
@@ -267,7 +272,7 @@ func NewPointerAddress(network Network, payment StakeCredential, ptr Pointer) (A
 	if payment.Type == ScriptCredential {
 		addrType = Ptr + 1
 	}
-	return Address{Type: addrType, Network: network, Payment: payment, Pointer: ptr}, nil
+	return &ShelleyAddress{Type: addrType, Network: network, Payment: payment, Pointer: ptr}, nil
 }
 
 func decodeFromNat(data []byte) (uint64, uint, error) {

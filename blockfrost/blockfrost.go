@@ -44,7 +44,7 @@ func NewNode(network cardano.Network, projectID string) cardano.Node {
 }
 
 func (b *BlockfrostNode) UTxOs(addr cardano.Address) ([]cardano.UTxO, error) {
-	butxos, err := b.client.AddressUTXOs(context.Background(), addr.Bech32(), blockfrost.APIQueryParams{})
+	butxos, err := b.client.AddressUTXOs(context.Background(), addr.String(), blockfrost.APIQueryParams{})
 	if err != nil {
 		// Addresses without UTXOs return NotFound error
 		if err, ok := err.(*blockfrost.APIError); ok {

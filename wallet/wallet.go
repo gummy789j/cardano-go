@@ -73,7 +73,7 @@ func (w *Wallet) Transfer(receiver cardano.Address, amount *cardano.Value) (*car
 			if err != nil {
 				return nil, err
 			}
-			if addr.Bech32() == utxo.Spender.Bech32() {
+			if addr.String() == utxo.Spender.String() {
 				keys[i] = key
 			}
 		}
@@ -143,7 +143,7 @@ func (w *Wallet) AddAddress() (cardano.Address, error) {
 	w.addrKeys = append(w.addrKeys, newKey)
 	payment, err := cardano.NewKeyCredential(newKey.PubKey())
 	if err != nil {
-		return cardano.Address{}, err
+		return nil, err
 	}
 	return cardano.NewEnterpriseAddress(w.network, payment)
 }

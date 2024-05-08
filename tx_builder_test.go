@@ -587,7 +587,7 @@ func TestAddChangeIfNeeded(t *testing.T) {
 				}
 			}
 			firstOutputReceiver := tx.Body.Outputs[0].Address
-			if got, want := firstOutputReceiver.Bech32(), expectedReceiver.Bech32(); got != want {
+			if got, want := firstOutputReceiver.String(), expectedReceiver.String(); got != want {
 				t.Errorf("invalid change output receiver: got %v want %v", got, want)
 			}
 		})

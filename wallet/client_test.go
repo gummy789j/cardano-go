@@ -91,7 +91,7 @@ func TestCreateWallet(t *testing.T) {
 			t.Errorf("invalid mnemonic:\ngot: %v\nwant: %v", mnemonic, testVector.mnemonic)
 		}
 
-		if addresses[0].Bech32() != testVector.paymentAddr0 {
+		if addresses[0].String() != testVector.paymentAddr0 {
 			t.Errorf("invalid paymentAddr0:\ngot: %v\nwant: %v", addresses[0], testVector.paymentAddr0)
 		}
 	}
@@ -123,7 +123,7 @@ func TestRestoreWallet(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if addresses[0].Bech32() != testVector.paymentAddr0 {
+		if addresses[0].String() != testVector.paymentAddr0 {
 			t.Errorf("invalid paymentAddr0:\ngot: %v\nwant: %v", addresses[0], testVector.paymentAddr0)
 		}
 	}

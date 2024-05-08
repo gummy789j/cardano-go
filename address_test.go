@@ -46,7 +46,7 @@ func TestNewAddressFromBytes(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if got, want := addr.Bech32(), addrBech32; got != want {
+		if got, want := addr.String(), addrBech32; got != want {
 			t.Errorf("invalid address %d\ngot: %s\nwant: %s", i, got, want)
 		}
 	}
@@ -81,7 +81,7 @@ func TestNewAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := base0.Bech32(), addrType0; got != want {
+	if got, want := base0.String(), addrType0; got != want {
 		t.Errorf("invalid base address\ngot: %s\nwant: %s", got, want)
 	}
 
@@ -89,7 +89,7 @@ func TestNewAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := base1.Bech32(), addrType1; got != want {
+	if got, want := base1.String(), addrType1; got != want {
 		t.Errorf("invalid base address\ngot: %s\nwant: %s", got, want)
 	}
 
@@ -97,7 +97,7 @@ func TestNewAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := base2.Bech32(), addrType2; got != want {
+	if got, want := base2.String(), addrType2; got != want {
 		t.Errorf("invalid base address\ngot: %s\nwant: %s", got, want)
 	}
 
@@ -105,7 +105,7 @@ func TestNewAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := base3.Bech32(), addrType3; got != want {
+	if got, want := base3.String(), addrType3; got != want {
 		t.Errorf("invalid base address\ngot: %s\nwant: %s", got, want)
 	}
 
@@ -113,7 +113,7 @@ func TestNewAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := pointer0.Bech32(), addrType4; got != want {
+	if got, want := pointer0.String(), addrType4; got != want {
 		t.Errorf("invalid pointer address\ngot: %s\nwant: %s", got, want)
 	}
 
@@ -121,7 +121,7 @@ func TestNewAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := pointer1.Bech32(), addrType5; got != want {
+	if got, want := pointer1.String(), addrType5; got != want {
 		t.Errorf("invalid pointer address\ngot: %s\nwant: %s", got, want)
 	}
 
@@ -129,7 +129,7 @@ func TestNewAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := enterprise0.Bech32(), addrType6; got != want {
+	if got, want := enterprise0.String(), addrType6; got != want {
 		t.Errorf("invalid enterprise address\ngot: %s\nwant: %s", got, want)
 	}
 
@@ -137,7 +137,7 @@ func TestNewAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := enterprise1.Bech32(), addrType7; got != want {
+	if got, want := enterprise1.String(), addrType7; got != want {
 		t.Errorf("invalid enterprise address\ngot: %s\nwant: %s", got, want)
 	}
 }
