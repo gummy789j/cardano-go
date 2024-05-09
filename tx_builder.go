@@ -1,6 +1,7 @@
 package cardano
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math"
 
@@ -194,30 +195,59 @@ func (tb *TxBuilder) Build() (*Tx, error) {
 	return tb.tx, nil
 }
 
+func (tb *TxBuilder) addFakeWitnesses(n int) error {
+	fakeSig := make([]byte, 64)
+	// Read 64 random bytes into the slice
+	_, err := rand.Read(fakeSig)
+	if err != nil {
+		return fmt.Errorf("error generating random bytes: %v", err)
+	}
+
+	fakeVKey := make([]byte, 32)
+	// Read 32 random bytes into the slice
+	_, err = rand.Read(fakeVKey)
+	if err != nil {
+		return fmt.Errorf("error generating random bytes: %v", err)
+	}
+
+	witnesses := make([]VKeyWitness, n)
+	for i := 0; i < n; i++ {
+		witnesses[i] = VKeyWitness{
+			VKey:      fakeVKey,
+			Signature: fakeSig,
+		}
+	}
+	tb.tx.WitnessSet.VKeyWitnessSet = witnesses
+
+	return nil
+}
+
 func (tb *TxBuilder) addChangeIfNeeded(inputAmount, outputAmount *Value) error {
 	// Temporary fee to serialize a valid transaction
+	// Temporary fee to serialize a valid transaction
+	if len(tb.pkeys) == 0 {
+		if err := tb.addFakeWitnesses(1); err != nil {
+			return err
+		}
+	} else {
+		if err := tb.build(); err != nil {
+			return err
+		}
+	}
+
 	var expectedFee Coin
 	if tb.tx.Body.Fee == 0 {
+
 		tb.tx.Body.Fee = 2e5
-
-		// TODO: We should build a fake tx with hardcoded data like signatures, hashes, etc
-		if err := tb.build(); err != nil {
-			return err
-		}
-
 		expectedFee = tb.calculateMinFee()
+
 	} else {
-		// TODO: We should build a fake tx with hardcoded data like signatures, hashes, etc
-		if err := tb.build(); err != nil {
-			return err
-		}
+		expectedFee = tb.tx.Body.Fee
 
 		minFee := tb.calculateMinFee()
 
 		if minFee > expectedFee {
 			expectedFee = minFee
-		} else {
-			expectedFee = tb.tx.Body.Fee
 		}
 	}
 
@@ -269,6 +299,7 @@ func (tb *TxBuilder) addChangeIfNeeded(inputAmount, outputAmount *Value) error {
 			)
 		}
 		tb.tx.Body.Fee = newMinFee
+		return nil
 	}
 
 	tb.tx.Body.Fee = expectedFee
