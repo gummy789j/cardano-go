@@ -135,6 +135,16 @@ func (tb *TxBuilder) MinCoinsForTxOut(txOut *TxOutput) Coin {
 	return Coin(utxoEntrySizeWithoutVal+size) * tb.protocol.CoinsPerUTXOWord
 }
 
+func (tb *TxBuilder) MinCoinsForTxOutBabbage(txOut *TxOutput) Coin {
+	mTxOut, err := txOut.MarshalCBOR()
+	if err != nil {
+		fmt.Printf("error marshalling txOut: %v", err)
+		return tb.MinCoinsForTxOut(txOut)
+	}
+
+	return Coin(len(mTxOut))
+}
+
 // Calculate minimum lovelace a transaction output needs to hold post alonzo.
 // This implementation is copied from the origianl Haskell implementation:
 // https://github.com/input-output-hk/cardano-ledger/blob/eb053066c1d3bb51fb05978eeeab88afc0b049b2/eras/babbage/impl/src/Cardano/Ledger/Babbage/Rules/Utxo.hs#L242-L265
@@ -267,7 +277,7 @@ func (tb *TxBuilder) addChangeIfNeeded(inputAmount, outputAmount *Value) error {
 	changeAmount := inputAmount.Sub(outputAmount)
 	changeOutput := NewTxOutput(*tb.changeReceiver, changeAmount)
 
-	changeMinCoins := tb.MinCoinsForTxOut(changeOutput)
+	changeMinCoins := tb.MinCoinsForTxOutBabbage(changeOutput)
 	if changeAmount.Coin < changeMinCoins {
 		if changeAmount.OnlyCoin() {
 			tb.tx.Body.Fee = expectedFee + changeAmount.Coin // burn change
